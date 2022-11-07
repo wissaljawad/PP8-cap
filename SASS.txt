@@ -1,0 +1,51 @@
+%web_drop_table(WORK.IMPORT);
+
+
+FILENAME REFFILE '/home/u59605456/sasuser.v94/Products/campaign.csv';
+
+PROC IMPORT DATAFILE=REFFILE
+	DBMS=CSV
+	OUT=WORK.IMPORT;
+	GETNAMES=YES;
+RUN;
+
+PROC CONTENTS DATA=WORK.IMPORT; RUN;
+
+
+%web_open_table(WORK.IMPORT);
+
+proc sql noprint;
+	create table work.filter as select * from WORK.IMPORT 
+		where(put(ua_form_factor, $7.) EQ 'Desktop' OR put(ua_form_factor, $7.) EQ 
+		'Mobile');
+quit;
+ods graphics / reset width=6.4in height=4.8in imagemap;
+
+proc sgplot data=WORK.IMPORT;
+	vbar hour / group=day_of_week groupdisplay=cluster;
+	yaxis grid;
+run;
+
+ods graphics / reset;
+
+proc template;
+	define statgraph SASStudio.Pie;
+		begingraph;
+		layout region;
+		piechart category=ua_form_factor /;
+		endlayout;
+		endgraph;
+	end;
+run;
+
+ods graphics / reset width=6.4in height=4.8in imagemap;
+
+proc sgrender template=SASStudio.Pie data=WORK.IMPORT;
+run;
+
+ods graphics / reset;
+
+proc freq data=WORK.IMPORT;
+	tables location_country location_city week hour_of_day day_of_week 
+		month_of_year / plots=(freqplot cumfreqplot);
+run;
